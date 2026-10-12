@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Car Switcher</string>
+    <string name="accessibility_description">Плавающая кнопка для переключения между приложениями и их закрытия. Служба нужна, чтобы видеть текущее приложение и нажимать «Остановить» в настройках.</string>
+
+    <string name="running_apps">Запущенные приложения</string>
+    <string name="no_apps">Пока нет приложений. Откройте что-нибудь, и оно появится здесь.</string>
+    <string name="home">Домой</string>
+    <string name="cancel">Закрыть окно</string>
+    <string name="close_question">Закрыть?</string>
+    <string name="yes">ДА</string>
+    <string name="no">НЕТ</string>
+    <string name="nothing_to_close">Нет приложения для закрытия</string>
+    <string name="closed">Закрыто: %1$s</string>
+    <string name="close_failed">Не удалось закрыть: %1$s</string>
+    <string name="launch_failed">Не удалось открыть приложение</string>
+
+    <string name="setup_title">Настройка</string>
+    <string name="step_overlay">1. Показ поверх других приложений</string>
+    <string name="step_accessibility">2. Служба специальных возможностей</string>
+    <string name="step_usage">3. Доступ к статистике использования (необязательно)</string>
+    <string name="step_usage_hint">Чтобы в списке были и те приложения, которые открывались до включения службы.</string>
+    <string name="status_ok">Включено</string>
+    <string name="status_off">Выключено</string>
+    <string name="grant">Включить</string>
+    <string name="button_size">Размер кнопки</string>
+    <string name="size_s">Малая</string>
+    <string name="size_m">Средняя</string>
+    <string name="size_l">Большая</string>
+    <string name="show_button">Показать кнопку</string>
+    <string name="howto">Как пользоваться:\n• Одно нажатие: список запущенных приложений.\n• Двойное нажатие: закрыть текущее приложение (с подтверждением ДА / НЕТ).\n• Кнопку можно перетаскивать, она прилипает к краю экрана.\n\nПосле перезагрузки служба запускается сама.</string>
+</resources>

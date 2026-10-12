@@ -272,7 +272,7 @@ class OverlayController(
                 stretchMode = GridView.STRETCH_COLUMN_WIDTH
                 setPadding(dp(16), dp(8), dp(16), dp(8))
                 clipToPadding = false
-                selector = android.R.color.transparent
+                selector = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
                 adapter = AppAdapter(apps)
                 setOnItemClickListener { _, _, pos, _ -> launch(apps[pos]) }
             }

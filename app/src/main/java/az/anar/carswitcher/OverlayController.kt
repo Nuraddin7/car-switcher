@@ -104,8 +104,7 @@ class OverlayController(
         val slop = ViewConfiguration.get(ctx).scaledTouchSlop * 2
         val detector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
             override fun onDown(e: MotionEvent) = true
-            override fun onSingleTapConfirmed(e: MotionEvent): Boolean { showSwitcher(); return true }
-            override fun onDoubleTap(e: MotionEvent): Boolean { showConfirm(); return true }
+            override fun onSingleTapUp(e: MotionEvent): Boolean { showSwitcher(); return true }
         })
         var downX = 0f; var downY = 0f
         var startX = 0; var startY = 0
@@ -273,8 +272,7 @@ class OverlayController(
                 setPadding(dp(16), dp(8), dp(16), dp(8))
                 clipToPadding = false
                 selector = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
-                adapter = AppAdapter(apps)
-                setOnItemClickListener { _, _, pos, _ -> launch(apps[pos]) }
+                adapter = AppAdapter(apps.toMutableList())
             }
             root.addView(grid, LinearLayout.LayoutParams(match, 0, 1f))
         }
@@ -310,88 +308,62 @@ class OverlayController(
         }
     }
 
-    private inner class AppAdapter(private val apps: List<AppEntry>) : BaseAdapter() {
+    private inner class AppAdapter(private val apps: MutableList<AppEntry>) : BaseAdapter() {
         override fun getCount() = apps.size
         override fun getItem(position: Int) = apps[position]
         override fun getItemId(position: Int) = position.toLong()
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val cell = (convertView as? LinearLayout) ?: LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setPadding(dp(8), dp(12), dp(8), dp(12))
+            val cell = (convertView as? FrameLayout) ?: FrameLayout(ctx).apply {
                 layoutParams = ViewGroup.LayoutParams(match, dp(176))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = dp(20).toFloat()
                     setColor(0xFF263238.toInt())
                 }
-                addView(ImageView(ctx), LinearLayout.LayoutParams(dp(96), dp(96)))
-                addView(TextView(ctx).apply {
-                    setTextColor(Color.WHITE)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+                // содержимое: иконка + подпись
+                addView(LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
-                    maxLines = 2
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                }, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(8) })
+                    setPadding(dp(8), dp(12), dp(8), dp(12))
+                    addView(ImageView(ctx), LinearLayout.LayoutParams(dp(96), dp(96)))
+                    addView(TextView(ctx).apply {
+                        setTextColor(Color.WHITE)
+                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+                        gravity = Gravity.CENTER
+                        maxLines = 2
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                    }, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(8) })
+                }, FrameLayout.LayoutParams(match, match))
+                // крестик закрытия в правом верхнем углу
+                addView(TextView(ctx).apply {
+                    text = "\u2715"
+                    gravity = Gravity.CENTER
+                    setTextColor(Color.WHITE)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+                    setTypeface(null, Typeface.BOLD)
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(0xFFC62828.toInt())
+                        setStroke(dp(2), Color.WHITE)
+                    }
+                }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.END).apply {
+                    topMargin = dp(6); rightMargin = dp(6)
+                })
             }
             val app = apps[position]
-            (cell.getChildAt(0) as ImageView).setImageDrawable(app.icon)
-            (cell.getChildAt(1) as TextView).text = app.label
+            val content = cell.getChildAt(0) as LinearLayout
+            (content.getChildAt(0) as ImageView).setImageDrawable(app.icon)
+            (content.getChildAt(1) as TextView).text = app.label
+            cell.setOnClickListener { launch(app) }
+            cell.getChildAt(1).setOnClickListener {
+                handler.removeCallbacks(autoHide)
+                handler.postDelayed(autoHide, 20_000)
+                apps.remove(app)
+                notifyDataSetChanged()
+                stopper.kill(app)
+            }
             return cell
         }
-    }
-
-    // --------------------------------------------------- подтверждение закрытия
-
-    fun showConfirm() {
-        val pkg = tracker.foregroundPackage
-        val entry = pkg?.let { tracker.toEntry(it) }
-        if (entry == null) {
-            toast(R.string.nothing_to_close); return
-        }
-
-        val root = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setBackgroundColor(0xF0101820.toInt())
-            setPadding(dp(24), dp(40), dp(24), dp(24))
-        }
-        root.addView(TextView(ctx).apply {
-            text = ctx.getString(R.string.close_question)
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 64f)
-            setTypeface(null, Typeface.BOLD)
-            gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(match, wrap))
-
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        row.addView(ImageView(ctx).apply { setImageDrawable(entry.icon) }, LinearLayout.LayoutParams(dp(80), dp(80)))
-        row.addView(TextView(ctx).apply {
-            text = entry.label
-            setTextColor(0xFFCFD8DC.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f)
-            maxLines = 2
-        }, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(20) })
-        root.addView(row, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(16) })
-
-        val buttons = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        buttons.addView(
-            bigButton(ctx.getString(R.string.yes), 0xFF2E7D32.toInt(), 72f) {
-                hidePanel()
-                stopper.forceStop(entry)
-            },
-            LinearLayout.LayoutParams(0, match, 1f).apply { marginEnd = dp(16) }
-        )
-        buttons.addView(
-            bigButton(ctx.getString(R.string.no), 0xFFC62828.toInt(), 72f) { hidePanel() },
-            LinearLayout.LayoutParams(0, match, 1f)
-        )
-        root.addView(buttons, LinearLayout.LayoutParams(match, 0, 1f).apply { topMargin = dp(32) })
-
-        showPanel(root, 12_000)
     }
 }
